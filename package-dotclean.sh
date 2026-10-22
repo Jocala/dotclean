@@ -32,6 +32,7 @@ mkdir -p "$STAGE" packages
 ditto build/DotClean.app "$STAGE/DotClean.app"
 ln -s /Applications "$STAGE/Applications"
 cp README.md "$STAGE/README.md"
+cp LICENSE "$STAGE/LICENSE"
 rm -f "$OUT_DMG"
 hdiutil create -volname "$VOLNAME" -srcfolder "$STAGE" -format UDZO -ov "$OUT_DMG"
 
