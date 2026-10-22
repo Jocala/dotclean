@@ -1,0 +1,6 @@
+build
+.build*
+packages/
+web/*.dmg
+icon/AppIcon.iconset
+.DS_Store

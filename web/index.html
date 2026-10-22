@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="dotclean — a macOS menu-bar app that keeps non-Mac disks free of .DS_Store and ._ AppleDouble files. Removes them live as they appear, or on demand from the Finder with a preview. Universal (Apple Silicon + Intel), Developer ID signed and notarized. No root daemon, no installer, no admin password.">
+<meta name="keywords" content="dotclean, .DS_Store, AppleDouble, ._ files, macOS metadata, clean USB drive, exFAT metadata, SMB share metadata, BlueHarvest alternative">
+<title>dotclean — Keep Non-Mac Disks Clean</title>
+<link rel="icon" type="image/png" href="images/dotclean-icon-512.png">
+<LINK REL=StyleSheet HREF="../adblink.css" TYPE="text/css" MEDIA=screen>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-B67VTTJQ1L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-B67VTTJQ1L');
+</script>
+
+<style>
+  /* dotclean overrides within the adblink.css layout */
+  .inner-left {
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1a2e;
+    background: #ffffff;
+    border: #d0d7de 1px solid;
+    padding: 24px 28px;
+  }
+  .inner-right {
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    border: none;
+    padding: 0 0 0 8px;
+    min-height: 60px;
+  }
+
+  /* Typography */
+  .dc-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .dc-header img { width: 64px; height: 64px; border-radius: 14px; flex-shrink: 0; }
+  .dc-header h1 { font-size: 2rem; font-weight: 800; color: #0b1220; margin: 0; letter-spacing: -0.5px; }
+  .dc-header .dc-sub { font-size: 1.05rem; color: #4a5568; font-weight: 500; margin: 0; }
+
+  /* Intro */
+  .dc-intro { font-size: 1.02rem; line-height: 1.65; color: #2d3748; max-width: 640px; margin: 0 0 28px; }
+  .dc-intro code { background: #edf2f7; padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+
+  /* Section headings */
+  .dc-section-heading {
+    font-size: 1.25rem; font-weight: 700; color: #0b1220;
+    border-bottom: 2px solid #007aff; padding-bottom: 6px;
+    margin: 32px 0 18px;
+  }
+
+  /* Feature grid */
+  .dc-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .dc-feat {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+  .dc-feat .dc-feat-ico {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: #007aff;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-top: 1px;
+  }
+  .dc-feat .dc-feat-body h4 { font-size: 0.92rem; font-weight: 700; color: #0b1220; margin: 0 0 2px; }
+  .dc-feat .dc-feat-body p { font-size: 0.82rem; color: #4a5568; margin: 0; line-height: 1.4; }
+
+  /* Rules lists */
+  .dc-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+  .dc-list {
+    background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .dc-list h4 { font-size: 0.9rem; font-weight: 700; color: #0b1220; margin: 0 0 8px; }
+  .dc-list ul { margin: 0; padding-left: 18px; }
+  .dc-list li { font-size: 0.82rem; color: #4a5568; line-height: 1.55; }
+  .dc-list code { background: #edf2f7; padding: 0 4px; border-radius: 3px; font-size: 0.95em; }
+  .dc-list.dc-keep { border-color: #c6f6d5; background: #f0fff4; }
+  .dc-list.dc-keep h4 { color: #22543d; }
+
+  /* Download tiles */
+  .dc-dl-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .dc-dl {
+    flex: 1;
+    min-width: 140px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .dc-dl img { width: 48px; height: 48px; margin-bottom: 8px; border-radius: 10px; }
+  .dc-dl .dc-dl-os { font-weight: 700; font-size: 0.95rem; color: #0b1220; margin-bottom: 2px; }
+  .dc-dl .dc-dl-size { font-size: 0.78rem; color: #718096; margin-bottom: 10px; }
+  .dc-dl a {
+    display: inline-block;
+    background: #007aff;
+    color: #fff;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: background 0.12s;
+  }
+  .dc-dl a:hover { background: #005ecb; }
+
+  /* Requirements note */
+  .dc-note { font-size: 0.9rem; color: #4a5568; margin: 14px 0 18px; line-height: 1.5; max-width: 640px; }
+  .dc-note b { color: #0b1220; }
+
+  /* About / footer */
+  .dc-about { text-align: center; margin: 28px 0 18px; }
+  .dc-about h3 { font-size: 1.1rem; font-weight: 700; color: #0b1220; margin-bottom: 6px; }
+  .dc-about p { font-size: 0.9rem; color: #4a5568; max-width: 540px; margin: 4px auto; line-height: 1.5; }
+  .dc-disclaimer { font-size: 0.78rem; color: #a0aec0; text-align: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+  .dc-home { text-align: center; margin-top: 14px; }
+  .dc-home a { color: #007aff; font-weight: 600; font-size: 0.9rem; }
+
+  @media (max-width: 600px) {
+    .dc-features { grid-template-columns: 1fr; }
+    .dc-lists { grid-template-columns: 1fr; }
+    .dc-dl-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="float-left-area">
+<div class="inner-left">
+
+<!-- AdSense top banner -->
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-3267309331393020"
+     data-ad-slot="9731222591"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<p>&nbsp;</p>
+
+<!-- HEADER -->
+<div class="dc-header">
+  <img src="images/dotclean-icon-512.png" alt="dotclean icon">
+  <div>
+    <h1>Jocala dotclean</h1>
+    <p class="dc-sub">Keep Non-Mac Disks Clean</p>
+  </div>
+</div>
+
+<!-- INTRO -->
+<p class="dc-intro">
+  Copy a file to a USB stick, an SD card or a Windows share and macOS leaves
+  debris behind: <code>.DS_Store</code> files, and <code>._</code> AppleDouble
+  companions that carry the extended attributes the filesystem cannot store.
+  They show up on Windows, on Linux, on cameras and on TVs. dotclean removes
+  them &mdash; live, as they appear, or on demand from the Finder with a preview
+  of exactly what will go. It runs as you, not as root: no daemon, no installer,
+  no administrator password.
+</p>
+
+<!-- FEATURES -->
+<h3 class="dc-section-heading">Features</h3>
+<div class="dc-features">
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>Live Cleanup</h4>
+      <p>Watches every non-Mac volume and deletes <code>._</code> and <code>.DS_Store</code> the moment they appear.</p>
+    </div>
+  </div>
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>Clean on Demand</h4>
+      <p>Right-click a disk or folder in the Finder &rarr; <b>Services</b> &rarr; <b>Clean using DotClean</b>, or use the menu bar.</p>
+    </div>
+  </div>
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>Preview First</h4>
+      <p>Every clean shows counts and sizes before anything is removed. No silent deletion, ever.</p>
+    </div>
+  </div>
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>Clean &amp; Eject</h4>
+      <p>One action for USB keys and SD cards: clean, unmount, and detach when it is done.</p>
+    </div>
+  </div>
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>No Root Daemon</h4>
+      <p>No privileged helper and no system-wide delete rights. It runs as you, in your session.</p>
+    </div>
+  </div>
+  <div class="dc-feat">
+    <div class="dc-feat-ico">&#10003;</div>
+    <div class="dc-feat-body">
+      <h4>Command Line Included</h4>
+      <p>A <code>bclean</code> tool ships inside the app for scripting. Dry-run unless you pass <code>--yes</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- RULES -->
+<h3 class="dc-section-heading">What It Removes</h3>
+<div class="dc-lists">
+  <div class="dc-list">
+    <h4>Deleted from non-Mac volumes</h4>
+    <ul>
+      <li><code>._</code> AppleDouble files</li>
+      <li><code>.DS_Store</code></li>
+      <li><code>.AppleDouble</code> folders</li>
+      <li><code>__MACOSX</code> folders</li>
+      <li><code>Thumbs.db</code> and <code>desktop.ini</code></li>
+      <li><code>.apdisk</code>, <code>.VolumeIcon.icns</code></li>
+      <li><code>.Trashes</code>, <code>.Spotlight-V100</code>, <code>.fseventsd</code> <small>(on demand only)</small></li>
+      <li><code>$Recycle.bin</code>, <code>System Volume Information</code> <small>(on demand only)</small></li>
+    </ul>
+  </div>
+  <div class="dc-list dc-keep">
+    <h4>Never touched</h4>
+    <ul>
+      <li>Any APFS or HFS+ volume &mdash; Mac disks are left alone by default</li>
+      <li><code>._</code> files for fonts and artwork, where the companion file <i>is</i> the data</li>
+      <li>Mount points, and anything outside the volume you selected</li>
+      <li>Symlinks are never followed</li>
+      <li>Your actual files</li>
+    </ul>
+  </div>
+</div>
+
+<!-- GET DOTCLEAN -->
+<h3 class="dc-section-heading">Get dotclean 1.0</h3>
+
+<p class="dc-note">
+  <b>macOS 13 or newer</b>, Apple&nbsp;Silicon or Intel. The download is a
+  signed and notarized disk image: open it and drag <b>DotClean</b> to
+  <b>Applications</b>. There is no installer package and no administrator
+  password &mdash; it installs nothing outside its own bundle.
+</p>
+
+<div class="dc-dl-row">
+  <div class="dc-dl">
+    <img src="images/dotclean-icon-512.png" alt="macOS">
+    <div class="dc-dl-os">macOS</div>
+    <div class="dc-dl-size">dotclean v1.0 &middot; universal</div>
+    <a href="dotclean.1.0.dmg">Download</a>
+  </div>
+</div>
+
+<div class="dc-about">
+  <h3>How it works</h3>
+  <p>
+    dotclean listens to the filesystem with a single FSEvents stream rooted at
+    <code>/</code> and filters events by mount point, so plugging in a stick never
+    needs a restart. Anything matching a rule on a non-Mac volume is removed
+    immediately. If the kernel ever drops events under heavy load, the affected
+    subtree is re-scanned instead of being ignored. Every deletion is written to
+    <code>~/Library/Logs/DotClean/dotclean.log</code>.
+  </p>
+  <p>
+    On-demand cleans run the same rule engine in two phases &mdash; scan, then
+    delete &mdash; so the list you approve is the list that gets removed. Files
+    are checked again immediately before each unlink: same volume, not a mount
+    point, not a symlink.
+  </p>
+</div>
+
+<div class="dc-disclaimer">
+  &copy; 2026 Jocala Software &middot; removes metadata only &middot; review the log before trusting it with anything you care about
+</div>
+
+<div class="dc-home">
+  <a href="../index.html">jocala.com</a>
+</div>
+
+</div>
+</div>
+
+<div class="float-right-area">
+<div class="inner-right">
+
+<!-- AdSense sidebar ad 1 -->
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<ins class="adsbygoogle"
+     style="display:inline-block;width:300px;height:600px"
+     data-ad-client="ca-pub-3267309331393020"
+     data-ad-slot="6199270995"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<p>
+
+<!-- AdSense sidebar ad 2 -->
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<ins class="adsbygoogle"
+     style="display:inline-block;width:300px;height:600px"
+     data-ad-client="ca-pub-3267309331393020"
+     data-ad-slot="8358831794"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+</div>
+</div>
+
+<div class="clear-floated"></div>
+
+</body>
+</html>
