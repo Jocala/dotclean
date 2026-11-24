@@ -1,6 +1,6 @@
 APP_NAME    := DotClean
 BUNDLE_ID   := com.jocala.dotclean
-VERSION     := 1.0
+VERSION     := $(shell /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
 BUILD       := build
 APP         := $(BUILD)/$(APP_NAME).app
 CONFIG      := release
@@ -11,7 +11,7 @@ NOTARY      := notary-jeff
 
 SWIFT_BUILD = swift build -c $(CONFIG) $(ARCHS) --scratch-path $(SCRATCH)
 
-.PHONY: all build bin icon app sign notarize test clean install verify run package
+.PHONY: all build bin icon app sign notarize test version-check clean install verify run package
 
 all: app
 
@@ -38,13 +38,20 @@ app: build
 	cp "$$BIN/DotClean" "$(APP)/Contents/MacOS/$(APP_NAME)"; \
 	cp "$$BIN/bclean" "$(APP)/Contents/MacOS/bclean"; \
 	cp icon/AppIcon.icns "$(APP)/Contents/Resources/AppIcon.icns"; \
+	cp Resources/donatel.png "$(APP)/Contents/Resources/donatel.png"; \
 	cp Resources/Info.plist "$(APP)/Contents/Info.plist"; \
 	printf 'APPL????' > "$(APP)/Contents/PkgInfo"; \
 	plutil -lint "$(APP)/Contents/Info.plist" >/dev/null; \
 	lipo -info "$(APP)/Contents/MacOS/$(APP_NAME)"; \
 	echo "built $(APP)"
 
-test:
+version-check:
+	@V="$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"; \
+	grep -q "toolVersion = \"$$V\"" Sources/bclean/main.swift \
+	  || { echo "bclean toolVersion does not match Info.plist ($$V)"; exit 1; }; \
+	echo "version $$V consistent"
+
+test: version-check
 	swift test
 
 sign:

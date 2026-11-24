@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private var isBusy = false
+    private var about: AboutPanelController?
 
     // MARK: - Lifecycle
 
@@ -34,7 +35,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.image = NSImage(systemSymbolName: "sparkles",
                                    accessibilityDescription: "DotClean")
             button.image?.isTemplate = true
-            button.toolTip = "DotClean"
         }
         let menu = NSMenu()
         menu.delegate = self
@@ -70,7 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(deleted)
         menu.addItem(.separator())
 
-        let volumes = VolumeList.targets()
+        let volumes = VolumeList.cleanable()
+        let allowedHosts = NetworkPolicy.allowedHosts
         if volumes.isEmpty {
             let none = NSMenuItem(title: "No non-Mac volumes mounted", action: nil, keyEquivalent: "")
             none.isEnabled = false
@@ -83,6 +84,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 submenu.addItem(item("Clean…", #selector(cleanVolume(_:)), volume.mountPoint))
                 if volume.isRemovable || !volume.isLocal {
                     submenu.addItem(item("Clean & Eject", #selector(cleanAndEject(_:)), volume.mountPoint))
+                }
+                if volume.isNetwork, let host = volume.networkHost {
+                    let watch = item("Clean Automatically",
+                                     #selector(toggleVolumeWatch(_:)), volume.mountPoint)
+                    watch.state = allowedHosts.contains(host) ? .on : .off
+                    submenu.addItem(.separator())
+                    submenu.addItem(watch)
                 }
                 parent.submenu = submenu
                 menu.addItem(parent)
@@ -104,6 +112,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(login)
 
         menu.addItem(item("Show Log", #selector(showLog(_:)), nil))
+        menu.addItem(item("About DotClean", #selector(showAbout(_:)), nil))
+        menu.addItem(item("Check for Updates…", #selector(checkForUpdates(_:)), nil))
         menu.addItem(.separator())
         menu.addItem(item("Quit DotClean", #selector(quit(_:)), "q"))
     }
@@ -166,6 +176,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         log?.write("APP   watcher \(watcherEnabled ? "on" : "off")")
     }
 
+    /// Network shares are opt-in per host: an SMB share can front a Mac, where
+    /// cleaning is destructive. Off by default; this writes the host into
+    /// watchNetworkHosts and refreshes the watcher's volume list.
+    @objc private func toggleVolumeWatch(_ sender: NSMenuItem) {
+        guard let path = sender.representedObject as? String,
+              let volume = VolumeList.cleanable().first(where: { $0.mountPoint == path }),
+              let host = volume.networkHost else { return }
+        let allowed = !NetworkPolicy.allowedHosts.contains(host)
+        NetworkPolicy.setAllowed(host: host, allowed)
+        watcher.refreshVolumes()
+        log?.write("APP   network host \(host) \(allowed ? "auto-clean on" : "auto-clean off")")
+    }
+
     @objc private func toggleLoginItem(_ sender: NSMenuItem) {
         do {
             if loginItemEnabled {
@@ -183,6 +206,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showLog(_ sender: NSMenuItem) {
         guard let path = log?.path else { return }
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    @objc private func showAbout(_ sender: NSMenuItem) {
+        if about == nil { about = AboutPanelController() }
+        about?.showWindow(nil)
+    }
+
+    @objc private func checkForUpdates(_ sender: NSMenuItem) {
+        UpdateUI.check()
     }
 
     @objc private func quit(_ sender: NSMenuItem) {

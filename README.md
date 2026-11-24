@@ -31,13 +31,13 @@ make install    # copy to /Applications + lsregister
 ## CLI
 
 ```sh
-bclean volumes                              # mounted volumes, * = cleanable
+bclean volumes                              # mounted volumes, * = auto, ~ = on request only
 bclean rules                                # rule table + scopes
 bclean scan  /Volumes/stick --samples 20    # report only
 bclean clean /Volumes/stick                 # dry run
 bclean clean /Volumes/stick --yes           # actually delete
 bclean clean /Volumes/stick --yes --eject   # clean + unmount + detach
-bclean sweep [--dry-run]                    # all non-Mac volumes
+bclean sweep [--dry-run] [--network]        # auto volumes, or every non-Mac with --network
 bclean watch [--seconds N]                  # run the live watcher in the foreground
 ```
 
@@ -75,6 +75,24 @@ locks the behaviour in.
 those as "re-scan this subtree" rather than ignoring them, and a pathological
 batch falls back to a subtree scan. A watcher that reports healthy while missing
 everything is worse than no watcher.
+
+## Network shares need an opt-in
+
+`fstype` says how the bytes travel, not what they land on: `smbfs` can front an
+APFS Mac (m1's home share), where deleting metadata is exactly what this tool
+avoids. So the watcher and `sweep` only touch a network share whose **host** is
+named in `watchNetworkHosts` (default: empty).
+
+```sh
+# allow these hosts to be cleaned automatically
+defaults write com.jocala.dotclean watchNetworkHosts -array 192.168.1.39 192.168.20.10
+```
+
+The menu-bar volume submenu has the same switch per share ("Clean
+Automatically"), which writes the host for you. Unlisted shares still appear in
+the menu and can be cleaned with `clean <path>`, `sweep --network`, or the
+volume submenu — explicitly, never behind your back. Local non-Mac volumes
+(exFAT/NTFS sticks) need no opt-in.
 
 ## Safety
 

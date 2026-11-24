@@ -1,7 +1,7 @@
 import DotCleanCore
 import Foundation
 
-let toolVersion = "1.0"
+let toolVersion = "1.01"
 
 // MARK: - Arguments
 
@@ -17,6 +17,7 @@ struct Args {
     var allowMac = false
     var samples = 0
     var seconds = 0
+    var network = false
 }
 
 func usage() -> String {
@@ -28,7 +29,7 @@ func usage() -> String {
       bclean scan  <path> [--samples N] [--json] [--watcher-only] [--mac]
       bclean clean <path> [--yes] [--dry-run] [--json]
                            [--watcher-only] [--mac] [--eject] [--force-eject]
-      bclean sweep [--dry-run] [--watcher-only]
+      bclean sweep [--dry-run] [--watcher-only] [--network]
       bclean watch [--seconds N]
       bclean rules
       bclean log
@@ -39,6 +40,9 @@ func usage() -> String {
       .Spotlight-V100, .fseventsd, .TemporaryItems, $Recycle.bin, System Volume
       Information).
       Mac-formatted volumes (APFS/HFS) are refused unless --mac is given.
+      sweep covers volumes the watcher would touch: local non-Mac disks plus
+      network shares whose host is in watchNetworkHosts (default: none).
+      --network adds the remaining non-Mac shares (ad-hoc only otherwise).
     """
 }
 
@@ -58,6 +62,7 @@ func parse(_ raw: [String]) -> Args {
         case "--mac": args.allowMac = true
         case "--watcher-only": args.scope = .watcher
         case "--adhoc": args.scope = .adhoc
+        case "--network": args.network = true
         case "--samples":
             index += 1
             args.samples = index < raw.count ? Int(raw[index]) ?? 0 : 0
@@ -131,6 +136,7 @@ func volume(for path: String) -> Volume {
     let standardized = (path as NSString).standardizingPath
     return Volume(mountPoint: standardized,
                   fsType: FSInfo.type(of: standardized) ?? "unknown",
+                  source: FSInfo.source(of: standardized) ?? "",
                   isLocal: true,
                   isRemovable: false,
                   isInternal: false)
@@ -166,20 +172,33 @@ let rules = RuleSet.standard
 switch args.command {
 case "volumes":
     let volumes = VolumeList.all()
+    let hosts = NetworkPolicy.allowedHosts
+    let automatic = volumes.filter { $0.allowsAutomaticClean(allowedHosts: hosts) }
     if args.json {
         struct VolumesJSON: Encodable {
             let volumes: [Volume]
-            let targets: [String]
+            let auto: [String]
+            let allowedHosts: [String]
         }
-        emit(VolumesJSON(volumes: volumes, targets: volumes.filter { $0.isTarget }.map { $0.mountPoint }))
+        emit(VolumesJSON(volumes: volumes,
+                         auto: automatic.map(\.mountPoint),
+                         allowedHosts: hosts.sorted()))
     } else {
         for volume in volumes {
-            let mark = volume.isTarget ? "*" : " "
-            print("\(mark) \(volume.mountPoint.padding(toLength: 34, withPad: " ", startingAt: 0)) "
-                  + "\(volume.fsType.padding(toLength: 10, withPad: " ", startingAt: 0)) "
-                  + (volume.isMacFormat ? "mac" : "non-mac"))
+            let auto = volume.allowsAutomaticClean(allowedHosts: hosts)
+            let mark = volume.isMacFormat ? " " : (auto ? "*" : "~")
+            let host = volume.networkHost ?? "-"
+            print("\(mark) \(volume.mountPoint.padding(toLength: 30, withPad: " ", startingAt: 0)) "
+                  + "\(volume.fsType.padding(toLength: 8, withPad: " ", startingAt: 0)) "
+                  + "\(host.padding(toLength: 24, withPad: " ", startingAt: 0)) "
+                  + (volume.isMacFormat ? "mac" : (auto ? "auto" : "manual only")))
         }
-        print("\n* = cleanable")
+        print("\n* = cleaned automatically   ~ = on request only   (unmarked) = Mac format")
+        if hosts.isEmpty {
+            print("network hosts allowed: none (default)")
+        } else {
+            print("network hosts allowed: \(hosts.sorted().joined(separator: " "))")
+        }
     }
 
 case "rules":
@@ -213,8 +232,13 @@ case "watch":
 case "scan", "clean", "sweep":
     var roots: [String] = []
     if args.command == "sweep" {
-        roots = VolumeList.targets().map { $0.mountPoint }
-        if roots.isEmpty { die("no non-Mac volumes mounted", code: 1) }
+        let pool = args.network ? VolumeList.cleanable() : VolumeList.targets()
+        roots = pool.map { $0.mountPoint }
+        if roots.isEmpty {
+            die(args.network
+                ? "no non-Mac volumes mounted"
+                : "no auto-clean volumes mounted (add a network host, or pass --network)", code: 1)
+        }
     } else {
         guard let path = args.path else { die("missing <path>") }
         _ = validate(path: path, allowMac: args.allowMac)
